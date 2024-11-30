@@ -1,0 +1,29 @@
+[general]
+# Absolute path to the SQLite database file.
+#
+# If the database does not exist, it will be created.
+db = ""
+
+# Maximum number of concurrent clients to manage.
+max_clients = 10
+
+[security.admin]
+# List of system UIDs that may send administration commands to the service.
+#
+# The user running the service may **always** send administration commands to the service.
+uid = []
+
+# List of system GIDs that may send administration commands to the service.
+gid = []
+
+[security.api]
+# List of system UIDs that may send notification commands to the service.
+uid = []
+
+# List of system GIDs that may send notification commands to the service.
+gid = []
+
+# Telegram bot configuration
+[telegram]
+# Token to use in order to connect to the Telegram bot API
+token = ""
