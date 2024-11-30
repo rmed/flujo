@@ -1,0 +1,9 @@
+[submodule "submodules/kouta"]
+	path = submodules/kouta
+	url = https://github.com/rmed/kouta.git
+[submodule "submodules/spdlog"]
+	path = submodules/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "submodules/tomlplusplus"]
+	path = submodules/tomlplusplus
+	url = https://github.com/marzer/tomlplusplus.git
