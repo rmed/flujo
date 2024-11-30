@@ -27,16 +27,16 @@ namespace flujo::config
     class Loader
     {
     public:
-        // Default constructor
+        /// @brief Default constructor
         Loader() = default;
 
-        // Copyable
-        Loader(const Loader&) = default;
-        Loader& operator=(const Loader&) = default;
+        // Not copyable
+        Loader(const Loader&) = delete;
+        Loader& operator=(const Loader&) = delete;
 
-        // Movable
-        Loader(Loader&&) = default;
-        Loader& operator=(Loader&&) = default;
+        // Not movable
+        Loader(Loader&&) = delete;
+        Loader& operator=(Loader&&) = delete;
 
         virtual ~Loader() = default;
 
