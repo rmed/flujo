@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
+#include <set>
 
 namespace flujo::config::domains
 {
@@ -9,8 +9,8 @@ namespace flujo::config::domains
     struct Security
     {
         /// @brief List of system UIDs that may perform certain actions.
-        std::vector<std::uint32_t> uids;
+        std::set<std::uint32_t> uids;
         /// @brief List of system GIDs that may perform certain actions.
-        std::vector<std::uint32_t> gids;
+        std::set<std::uint32_t> gids;
     };
 }  // namespace flujo::config::domains

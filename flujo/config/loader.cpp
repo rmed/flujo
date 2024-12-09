@@ -1,6 +1,9 @@
 #include "loader.hpp"
 
 #include <type_traits>
+#include <grp.h>
+#include <pwd.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 namespace flujo::config
@@ -144,17 +147,29 @@ namespace flujo::config
             return false;
         }
 
-        uids.visit(
-            [&dst = m_config.admin_security.uids](auto&& el) noexcept
-            {
-                if constexpr (toml::is_number<decltype(el)>)
+        for (auto&& uid : *uids.as_array())
+        {
+            uid.visit(
+                [&dst = m_config.admin_security.uids](auto&& el) noexcept
                 {
-                    dst.emplace_back(el.get());
-                }
-            });
+                    if constexpr (toml::is_number<decltype(el)>)
+                    {
+                        dst.insert(el.get());
+                    }
+                    else if constexpr (toml::is_string<decltype(el)>)
+                    {
+                        struct passwd* passwd_entry{getpwnam(el.get().c_str())};
+
+                        if (passwd_entry != nullptr)
+                        {
+                            dst.insert(passwd_entry->pw_uid);
+                        }
+                    }
+                });
+        }
 
         // Always allow current user
-        m_config.admin_security.uids.emplace_back(getuid());
+        m_config.admin_security.uids.insert(getuid());
 
         // Get GIDs
         auto gids{section["gid"]};
@@ -164,14 +179,26 @@ namespace flujo::config
             return false;
         }
 
-        gids.visit(
-            [&dst = m_config.admin_security.gids](auto&& el) noexcept
-            {
-                if constexpr (toml::is_number<decltype(el)>)
+        for (auto&& gid : *gids.as_array())
+        {
+            gid.visit(
+                [&dst = m_config.admin_security.gids](auto&& el) noexcept
                 {
-                    dst.emplace_back(el.get());
-                }
-            });
+                    if constexpr (toml::is_number<decltype(el)>)
+                    {
+                        dst.insert(el.get());
+                    }
+                    else if constexpr (toml::is_string<decltype(el)>)
+                    {
+                        struct group* group_entry{getgrnam(el.get().c_str())};
+
+                        if (group_entry != nullptr)
+                        {
+                            dst.insert(group_entry->gr_gid);
+                        }
+                    }
+                });
+        }
 
         return true;
     }
@@ -197,14 +224,26 @@ namespace flujo::config
             return false;
         }
 
-        uids.visit(
-            [&dst = m_config.api_security.uids](auto&& el) noexcept
-            {
-                if constexpr (toml::is_number<decltype(el)>)
+        for (auto&& uid : *uids.as_array())
+        {
+            uid.visit(
+                [&dst = m_config.api_security.uids](auto&& el) noexcept
                 {
-                    dst.emplace_back(el.get());
-                }
-            });
+                    if constexpr (toml::is_number<decltype(el)>)
+                    {
+                        dst.insert(el.get());
+                    }
+                    else if constexpr (toml::is_string<decltype(el)>)
+                    {
+                        struct passwd* passwd_entry{getpwnam(el.get().c_str())};
+
+                        if (passwd_entry != nullptr)
+                        {
+                            dst.insert(passwd_entry->pw_uid);
+                        }
+                    }
+                });
+        }
 
         // Get GIDs
         auto gids{section["gid"]};
@@ -214,14 +253,26 @@ namespace flujo::config
             return false;
         }
 
-        gids.visit(
-            [&dst = m_config.api_security.gids](auto&& el) noexcept
-            {
-                if constexpr (toml::is_number<decltype(el)>)
+        for (auto&& gid : *gids.as_array())
+        {
+            gid.visit(
+                [&dst = m_config.api_security.gids](auto&& el) noexcept
                 {
-                    dst.emplace_back(el.get());
-                }
-            });
+                    if constexpr (toml::is_number<decltype(el)>)
+                    {
+                        dst.insert(el.get());
+                    }
+                    else if constexpr (toml::is_string<decltype(el)>)
+                    {
+                        struct group* group_entry{getgrnam(el.get().c_str())};
+
+                        if (group_entry != nullptr)
+                        {
+                            dst.insert(group_entry->gr_gid);
+                        }
+                    }
+                });
+        }
 
         return true;
     }
