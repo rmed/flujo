@@ -1,10 +1,17 @@
 #include <iostream>
 
-#include "config/loader.hpp"
+#include "server/server.hpp"
 
 int main()
 {
-    flujo::config::Loader lod{};
-    std::cout << lod.load() << std::endl;
+    flujo::server::Server server{};
+    if (!server.setup())
+    {
+        std::cout << "Failed to load configuration file" << std::endl;
+        return -1;
+    }
+
+    server.run();
+
     return 0;
 }

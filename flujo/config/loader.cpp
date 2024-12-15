@@ -120,8 +120,12 @@ namespace flujo::config
 
         bool result{true};
 
+        result &= extract_value(section["socket"], m_config.general.socket_path);
         result &= extract_value(section["db"], m_config.general.db_path);
         result &= extract_value(section["max_clients"], m_config.general.max_clients);
+        result &= extract_value(section["buffer_size"], m_config.general.buffer_size);
+        result &= extract_value(section["cmd_timeout"], m_config.general.cmd_timeout);
+        result &= extract_value(section["session_timeout"], m_config.general.session_timeout);
 
         return result;
     }
