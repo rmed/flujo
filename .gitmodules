@@ -7,3 +7,6 @@
 [submodule "submodules/tomlplusplus"]
 	path = submodules/tomlplusplus
 	url = https://github.com/marzer/tomlplusplus.git
+[submodule "submodules/jsonrpcpp"]
+	path = submodules/jsonrpcpp
+	url = https://github.com/badaix/jsonrpcpp.git
