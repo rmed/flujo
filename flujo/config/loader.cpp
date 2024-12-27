@@ -25,9 +25,16 @@ namespace flujo::config
             src.visit(
                 [&result, &dst](auto&& el) noexcept
                 {
-                    if constexpr (toml::is_number<decltype(el)> && std::is_integral_v<TMemberType>)
+                    if constexpr (toml::is_number<decltype(el)>)
                     {
-                        dst = static_cast<TMemberType>(el.get());
+                        if constexpr (std::is_integral_v<TMemberType>)
+                        {
+                            dst = static_cast<TMemberType>(el.get());
+                        }
+                        else if constexpr (std::is_same_v<TMemberType, std::chrono::milliseconds>)
+                        {
+                            dst = std::chrono::milliseconds{static_cast<std::uint64_t>(el.get())};
+                        }
                     }
                     else if constexpr (toml::is_string<decltype(el)> && std::is_same_v<std::string, TMemberType>)
                     {
@@ -124,7 +131,6 @@ namespace flujo::config
         result &= extract_value(section["db"], m_config.general.db_path);
         result &= extract_value(section["max_clients"], m_config.general.max_clients);
         result &= extract_value(section["buffer_size"], m_config.general.buffer_size);
-        result &= extract_value(section["cmd_timeout"], m_config.general.cmd_timeout);
         result &= extract_value(section["session_timeout"], m_config.general.session_timeout);
 
         return result;

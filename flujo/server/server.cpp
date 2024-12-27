@@ -1,8 +1,9 @@
 #include "server.hpp"
 
 #include <sys/socket.h>
-
 #include <iostream>
+
+#include <spdlog/spdlog.h>
 
 namespace flujo::server
 {
@@ -68,7 +69,7 @@ namespace flujo::server
 
             if (!std::filesystem::remove(socket_path, err))
             {
-                std::cout << "Failed to remove old socket at " << socket_path << std::endl;
+                spdlog::error("Failed to remove old socket at {}", socket_path.c_str());
                 return false;
             }
         }
@@ -80,7 +81,7 @@ namespace flujo::server
 
         if (err)
         {
-            std::cout << "Failed to open acceptor: " << err.what() << std::endl;
+            spdlog::error("Failed to open acceptor: {}", err.what());
             return false;
         }
 
@@ -88,7 +89,7 @@ namespace flujo::server
 
         if (err)
         {
-            std::cout << "Failed to bind acceptor: " << err.what() << std::endl;
+            spdlog::error("Failed to bind acceptor: {}", err.what());
             return false;
         }
 
@@ -96,7 +97,7 @@ namespace flujo::server
 
         if (err)
         {
-            std::cout << "Failed to listen: " << err.what() << std::endl;
+            spdlog::error("Failed to listen: {}", err.what());
             return false;
         }
 
@@ -119,17 +120,23 @@ namespace flujo::server
 
     void Server::on_accepted(boost::system::error_code ec, boost::asio::local::stream_protocol::socket socket)
     {
+        if (ec == boost::asio::error::operation_aborted)
+        {
+            // Closing down
+            return;
+        }
+
         if (ec)
         {
-            std::cout << "Accept error: " << ec.what() << std::endl;
-            return;
+            spdlog::error("Accept error: {}", ec.what());
+            return do_accept();
         }
 
         // Check number of sessions
         if (m_sessions.size() >= m_config_loader.config().general.max_clients)
         {
             // Cannot allocate new sessions
-            std::cout << "Maximum number of sessions reached, discarding connection" << std::endl;
+            spdlog::warn("Maximum number of sessions reached, discarding connection");
             socket.close();
 
             return do_accept();
@@ -159,7 +166,6 @@ namespace flujo::server
                 this,
                 id,
                 std::move(socket),
-                m_config_loader.config().general.cmd_timeout,
                 m_config_loader.config().general.session_timeout,
                 m_config_loader.config().general.buffer_size,
                 Session::Connections{.connection_closed{kouta::base::callback::DeferredCallback<>{
@@ -167,7 +173,7 @@ namespace flujo::server
 
         if (!inserted)
         {
-            std::cout << "Failed to create session " << id << std::endl;
+            spdlog::error("Failed to create session {}", id);
             socket.close();
         }
 
@@ -182,7 +188,7 @@ namespace flujo::server
     {
         if (m_sessions.erase(id) == 0)
         {
-            std::cout << "Could not find session " << id << " to clean" << std::endl;
+            spdlog::warn("Could not find session {} to clean", id);
         }
     }
 }  // namespace flujo::server

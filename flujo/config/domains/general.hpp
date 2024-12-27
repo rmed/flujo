@@ -17,8 +17,6 @@ namespace flujo::config::domains
         std::size_t max_clients;
         /// @brief Buffer size for sessions (in bytes).
         std::size_t buffer_size;
-        /// @brief Period after which a command will be considered to have timed-out (in ms).
-        std::chrono::milliseconds cmd_timeout;
         /// @brief Period after which a session will be considered to be stale.
         std::chrono::milliseconds session_timeout;
     };

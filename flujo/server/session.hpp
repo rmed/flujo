@@ -17,6 +17,8 @@ namespace flujo::server
         {
             /// @brief Callback to invoke whenever the socket is closed.
             kouta::base::Callback<> connection_closed;
+            /// @brief Callback to invoke whenever a message has been received.
+            kouta::base::Callback<const std::string&> message_received;
         };
     }  // namespace session_detail
 
@@ -33,7 +35,6 @@ namespace flujo::server
             kouta::base::Component* parent,
             const std::string& id,
             boost::asio::local::stream_protocol::socket socket,
-            const std::chrono::milliseconds& cmd_timeout,
             const std::chrono::milliseconds& session_timeout,
             std::size_t buffer_size,
             const Connections& connections);
@@ -51,6 +52,9 @@ namespace flujo::server
         /// @brief Start the session handling flow.
         void start();
 
+        /// @brief Stop the session flow and close the socket.
+        void stop();
+
     private:
         /// @brief Check whether the client is allowed to perform
         bool check_credentials(bool admin_cmd);
@@ -60,6 +64,15 @@ namespace flujo::server
 
         /// @brief Attempt to read a full JSON message.
         void do_read_message();
+
+        /// @brief Discard N bytes from the remote client.
+        ///
+        /// @details
+        /// This is called when a client specifies a message size that is too big in order to *flush* the socket. The
+        /// number of bytes to discard is specified in @ref m_next_message_size.
+        ///
+        /// @note This does not reset the session timeout, so there is no danger of the session getting stuck.
+        void do_discard_incoming();
 
         // Handlers
 
@@ -83,13 +96,14 @@ namespace flujo::server
         /// @param[in] length       Number of bytes read.
         void on_message_received(boost::system::error_code ec, std::size_t length);
 
-        /// @brief Handle expiration of the command timer.
+        /// @brief Handle reception of bytes to discard
         ///
         /// @details
-        /// If a timeout occurs in a command, the client will be notified.
+        /// A new discard operation is enqueued until there are no more bytes to read.
         ///
-        /// @param[in,out] timer            Timer that expired.
-        void on_cmd_timer_expired(kouta::io::Timer& timer);
+        /// @param[in] ec           Error code (if any).
+        /// @param[in] length       Number of bytes read.
+        void on_discarded_received(boost::system::error_code ec, std::size_t length);
 
         /// @brief Handle expiration of the session timer.
         ///
@@ -107,9 +121,6 @@ namespace flujo::server
 
         /// @brief Callbacks used to interact with the server.
         Connections m_connections;
-
-        /// @brief Timer used to detect a timeout in the handling of a command.
-        kouta::io::Timer m_cmd_timer;
 
         /// @brief Timer used to detect a stale session..
         kouta::io::Timer m_session_timer;
