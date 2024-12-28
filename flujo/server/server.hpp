@@ -5,6 +5,7 @@
 #include <kouta/base/root.hpp>
 
 #include "config/loader.hpp"
+#include "dispatcher.hpp"
 #include "session.hpp"
 
 namespace flujo::server
@@ -98,11 +99,18 @@ namespace flujo::server
         /// @param[in] id           ID of the session that was closed.
         void on_session_closed(const std::string& id);
 
+        /// @brief Send a response to a remote client.
+        ///
+        /// @param[in] session_id       ID of the session to send the response through.
+        /// @param[in] message          JSON message to serialize and send.
+        void on_send_response(const std::string& session_id, const std::string& message);
+
         config::Loader m_config_loader;
         boost::asio::local::stream_protocol::endpoint m_endpoint;
         boost::asio::local::stream_protocol::acceptor m_acceptor;
 
         std::uint8_t m_session_serial;
+        Dispatcher m_dispatcher;
         std::map<std::string, std::unique_ptr<Session>> m_sessions;
     };
 }  // namespace flujo::server

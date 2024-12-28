@@ -12,6 +12,7 @@ namespace flujo::server
         , m_config_loader{}
         , m_endpoint{}
         , m_acceptor{context()}
+        , m_dispatcher{this, m_config_loader.config(), {}}
         , m_sessions{}
     {
     }
@@ -142,23 +143,10 @@ namespace flujo::server
             return do_accept();
         }
 
-        // Retrieve credentials
-        ucred credentials{};
-        socklen_t bytes_read{sizeof(ucred)};
-        int result = getsockopt(socket.native_handle(), SOL_SOCKET, SO_PEERCRED, &credentials, &bytes_read);
-
-        std::cout << "RESULT " << result << std::endl;
-
-        if (bytes_read != sizeof(ucred))
-        {
-            std::cout << "Read " << bytes_read << " instead of " << sizeof(ucred) << std::endl;
-            socket.close();
-
-            return do_accept();
-        }
-
         // Establish session
         std::string id{compute_session_id()};
+
+        spdlog::debug("Creating session {}", id);
 
         auto [session, inserted] = m_sessions.emplace(
             id,
@@ -168,27 +156,46 @@ namespace flujo::server
                 std::move(socket),
                 m_config_loader.config().general.session_timeout,
                 m_config_loader.config().general.buffer_size,
-                Session::Connections{.connection_closed{kouta::base::callback::DeferredCallback<>{
-                    this, std::bind_front(&Server::on_session_closed, this, id)}}}));
+                Session::Connections{
+                    .connection_closed{kouta::base::callback::DeferredCallback<>{
+                        this, std::bind_front(&Server::on_session_closed, this, id)}},
+                    .message_received{kouta::base::callback::DeferredCallback<const protocol::Message&>{
+                        &m_dispatcher, std::bind_front(&Dispatcher::on_message_received, &m_dispatcher, id)}}}));
 
         if (!inserted)
         {
             spdlog::error("Failed to create session {}", id);
             socket.close();
+
+            return do_accept();
         }
 
-        std::cout << "PID " << credentials.pid << std::endl;
-        std::cout << "UID " << credentials.uid << std::endl;
-        std::cout << "GID " << credentials.gid << std::endl;
+        // Start session
+        session->second->start();
 
         do_accept();
     }
 
     void Server::on_session_closed(const std::string& id)
     {
+        spdlog::debug("Deleting session {}", id);
+
         if (m_sessions.erase(id) == 0)
         {
             spdlog::warn("Could not find session {} to clean", id);
         }
+    }
+
+    void Server::on_send_response(const std::string& session_id, const std::string& message)
+    {
+        auto session{m_sessions.find(session_id)};
+
+        if (session == m_sessions.end())
+        {
+            spdlog::warn("Could not find session \"{}\" to send a response through", session_id);
+            return;
+        }
+
+        session->second->send_response(message);
     }
 }  // namespace flujo::server

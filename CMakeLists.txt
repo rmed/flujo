@@ -17,6 +17,7 @@ configure_file("flujo/compile-detail.h.in" "compile-detail.h")
 # Define target
 add_executable(flujo
     flujo/config/loader.cpp
+    flujo/server/dispatcher.cpp
     flujo/server/server.cpp
     flujo/server/session.cpp
     flujo/main.cpp

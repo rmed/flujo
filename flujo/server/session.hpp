@@ -6,7 +6,7 @@
 #include <kouta/base/component.hpp>
 #include <kouta/io/timer.hpp>
 
-#include <jsonrpcpp.hpp>
+#include "protocol/message.hpp"
 
 namespace flujo::server
 {
@@ -18,7 +18,7 @@ namespace flujo::server
             /// @brief Callback to invoke whenever the socket is closed.
             kouta::base::Callback<> connection_closed;
             /// @brief Callback to invoke whenever a message has been received.
-            kouta::base::Callback<const std::string&> message_received;
+            kouta::base::Callback<const protocol::Message&> message_received;
         };
     }  // namespace session_detail
 
@@ -28,7 +28,7 @@ namespace flujo::server
     public:
         using Connections = session_detail::Connections;
 
-        // Default constructor
+        // Not default constructible
         Session() = delete;
 
         Session(
@@ -39,11 +39,11 @@ namespace flujo::server
             std::size_t buffer_size,
             const Connections& connections);
 
-        // Copyable
+        // Not copyable
         Session(const Session&) = delete;
         Session& operator=(const Session&) = delete;
 
-        // Movable
+        // Not movable
         Session(Session&&) = delete;
         Session& operator=(Session&&) = delete;
 
@@ -54,6 +54,15 @@ namespace flujo::server
 
         /// @brief Stop the session flow and close the socket.
         void stop();
+
+        /// @brief Send a response to the remote client.
+        ///
+        /// @details
+        /// Internally, this method enqueues the JSON message to send and sends each of them sequentially in an
+        /// asynchronous manner.
+        ///
+        /// @param[in] message          JSON message to send.
+        void send_response(const std::string& message);
 
     private:
         /// @brief Check whether the client is allowed to perform
@@ -118,6 +127,9 @@ namespace flujo::server
 
         /// @brief Socket used to communicate with the remote client.
         boost::asio::local::stream_protocol::socket m_socket;
+
+        /// @brief Socket credentials.
+        ucred m_credentials;
 
         /// @brief Callbacks used to interact with the server.
         Connections m_connections;

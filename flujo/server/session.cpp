@@ -24,15 +24,31 @@ namespace flujo::server
         : kouta::base::Component{parent}
         , m_id{id}
         , m_socket{std::move(socket)}
+        , m_credentials{}
         , m_connections{connections}
         , m_session_timer{this, session_timeout, std::bind_front(&Session::on_session_timer_expired, this)}
         , m_next_message_size{}
         , m_buffer(buffer_size)
     {
+        // TODO set custom logger with session id
     }
 
     void Session::start()
     {
+        // Retrieve credentials
+        socklen_t bytes_read{sizeof(ucred)};
+
+        int result = getsockopt(m_socket.native_handle(), SOL_SOCKET, SO_PEERCRED, &m_credentials, &bytes_read);
+
+        if (bytes_read != sizeof(ucred))
+        {
+            spdlog::error(
+                "{}: Failed to read socket credentials, read {} instead of {} bytes", m_id, bytes_read, sizeof(ucred));
+            return stop();
+        }
+
+        spdlog::info("{}: Started session for PID {}", m_id, m_credentials.pid);
+
         m_session_timer.start();
         do_read_size();
     }
@@ -41,7 +57,18 @@ namespace flujo::server
     {
         // Stop processing events
         m_session_timer.stop();
-        m_socket.close();
+
+        if (m_socket.is_open())
+        {
+            m_socket.close();
+        }
+    }
+
+    void Session::send_response(const std::string& message)
+    {
+        // Enqueue message
+
+        // Send message if not sending anything
     }
 
     void Session::do_read_size()
@@ -86,7 +113,7 @@ namespace flujo::server
 
         if (ec)
         {
-            spdlog::error("Error reading message: {}", ec.what());
+            spdlog::error("{}: Error reading message: {}", m_id, ec.what());
 
             // Special handling
             if (ec == boost::asio::error::eof)
@@ -98,7 +125,7 @@ namespace flujo::server
 
         if (length != MSG_SIZE_LENGTH)
         {
-            spdlog::warn("Could not read full message size, read {} bytes", length);
+            spdlog::warn("{}: Could not read full message size, read {} bytes", m_id, length);
             return do_read_size();
         }
 
@@ -111,6 +138,11 @@ namespace flujo::server
         {
             // Message is too big, notify client and discard message
             // TODO
+            spdlog::warn(
+                "{}: Client is attempting to send {} bytes, which do not fit in the buffer ({} bytes)",
+                m_id,
+                m_next_message_size,
+                m_buffer.size());
 
             return do_discard_incoming();
         }
@@ -129,7 +161,7 @@ namespace flujo::server
 
         if (ec)
         {
-            spdlog::error("Error reading message: {}", ec.what());
+            spdlog::error("{}: Error reading message: {}", m_id, ec.what());
 
             // Special handling
             if (ec == boost::asio::error::eof)
@@ -141,15 +173,16 @@ namespace flujo::server
 
         if (length != m_next_message_size)
         {
-            spdlog::warn("Could not read full message, read {} bytes instead of {}", length, m_next_message_size);
+            spdlog::warn(
+                "{}: Could not read full message, read {} bytes instead of {}", m_id, length, m_next_message_size);
             return do_read_message();
         }
 
-        // Provide message string to the dispatcher
+        // Provide message to the dispatcher
         kouta::io::Parser parser{std::span<const std::uint8_t>{m_buffer}};
-        std::string message{parser.extract_string(0, m_next_message_size)};
 
-        m_connections.message_received(message);
+        m_connections.message_received(
+            {m_credentials.pid, m_credentials.uid, m_credentials.gid, parser.extract_string(0, m_next_message_size)});
 
         // Restart session timer
         m_session_timer.start();
@@ -168,7 +201,7 @@ namespace flujo::server
 
         if (ec)
         {
-            spdlog::error("Error reading discarded bytes: {}", ec.what());
+            spdlog::error("{}: Error reading discarded bytes: {}", m_id, ec.what());
 
             // Special handling
             if (ec == boost::asio::error::eof)
