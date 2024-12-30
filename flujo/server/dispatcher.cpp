@@ -68,7 +68,7 @@ namespace flujo::server
         const jsonrpcpp::Request& request, const protocol::Message& message)
     {
         // Check credentials
-        if (!m_config.api_security.uids.contains(message.uid) && !m_config.api_security.uids.contains(message.gid))
+        if (!m_config.api_security.uids.contains(message.uid) && !m_config.api_security.gids.contains(message.gid))
         {
             // Cannot use the service
             return jsonrpcpp::Response{

@@ -11,8 +11,11 @@ namespace flujo::server
         : kouta::base::Root{}
         , m_config_loader{}
         , m_endpoint{}
-        , m_acceptor{context()}
-        , m_dispatcher{this, m_config_loader.config(), {}}
+        , m_acceptor{context()}  // clang-format off
+        , m_dispatcher{this, m_config_loader.config(), {
+            kouta::base::callback::DeferredCallback{this, &Server::on_send_response}
+        }}
+        // clang-format on
         , m_sessions{}
     {
     }

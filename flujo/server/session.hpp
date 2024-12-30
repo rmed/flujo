@@ -1,9 +1,11 @@
 #pragma once
 
 #include <chrono>
+#include <queue>
 
 #include <kouta/base/callback.hpp>
 #include <kouta/base/component.hpp>
+#include <kouta/io/packer.hpp>
 #include <kouta/io/timer.hpp>
 
 #include "protocol/message.hpp"
@@ -83,6 +85,21 @@ namespace flujo::server
         /// @note This does not reset the session timeout, so there is no danger of the session getting stuck.
         void do_discard_incoming();
 
+        /// @brief Send the size of the next response in the queue.
+        ///
+        /// @details
+        /// Responses are enqueued via the @ref send_response() method. Note that this method will be called
+        /// automatically by @ref send_response() if no response is currently being sent, and again after a response has
+        /// been sent if there are messages remaining in the queue.
+        void do_send_response_size();
+
+        /// @brief Send an encoded JSON-RPC response message.
+        ///
+        /// @details
+        /// This method is called after the completion of @ref do_send_response_size() and will remove the response from
+        /// the queue.
+        void do_send_response_message();
+
         // Handlers
 
         /// @brief Handle reception of a message size.
@@ -105,7 +122,7 @@ namespace flujo::server
         /// @param[in] length       Number of bytes read.
         void on_message_received(boost::system::error_code ec, std::size_t length);
 
-        /// @brief Handle reception of bytes to discard
+        /// @brief Handle reception of bytes to discard.
         ///
         /// @details
         /// A new discard operation is enqueued until there are no more bytes to read.
@@ -113,6 +130,24 @@ namespace flujo::server
         /// @param[in] ec           Error code (if any).
         /// @param[in] length       Number of bytes read.
         void on_discarded_received(boost::system::error_code ec, std::size_t length);
+
+        /// @brief Handle completion of a response size delivery.
+        ///
+        /// @details
+        /// After sending this information, the message itself is sent to the client.
+        ///
+        /// @param[in] ec           Error code (if any).
+        /// @param[in] length       Number of bytes written.
+        void on_response_size_sent(boost::system::error_code ec, std::size_t length);
+
+        /// @brief Handle completion of a response delivery.
+        ///
+        /// @details
+        /// After the response has been sent, a new one is sent if there are any responses remaining in the queue.
+        ///
+        /// @param[in] ec           Error code (if any).
+        /// @param[in] length       Number of bytes written.
+        void on_response_sent(boost::system::error_code ec, std::size_t length);
 
         /// @brief Handle expiration of the session timer.
         ///
@@ -140,10 +175,23 @@ namespace flujo::server
         /// @brief Size of the next message to receive.
         std::size_t m_next_message_size;
 
-        /// @brief Buffer used to receive JSON commands.
+        /// @brief Buffer used to receive JSON-RPC commands.
         ///
         /// @details
         /// Although the vector can grow, the session will not accept messages that are too big for the buffer.
-        std::vector<std::uint8_t> m_buffer;
+        std::vector<std::uint8_t> m_read_buffer;
+
+        /// @brief Whether a response is being sent to the connected client.
+        bool m_sending_response;
+
+        /// @brief Queue of response messages to send to the connected client.
+        std::queue<std::string> m_response_queue;
+
+        /// @brief Packer used to send JSON-RPC responses.
+        ///
+        /// @details
+        /// As opposed to the read buffer, the buffer within the packer may grow as needed to accommodate for responses
+        /// to be sent.
+        kouta::io::Packer m_response_packer;
     };
 }  // namespace flujo::server
