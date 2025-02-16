@@ -1,5 +1,7 @@
 #include "dispatcher.hpp"
 
+#include <spdlog/spdlog.h>
+
 #include "protocol/error.hpp"
 
 namespace flujo::server
@@ -11,6 +13,48 @@ namespace flujo::server
         , m_connections{connections}
         , m_parser{}
     {
+    }
+
+    bool Dispatcher::do_send_cmd(
+        const std::optional<std::string>& user, const std::optional<std::string>& topic, const std::string& message)
+    {
+        bool result{user.has_value() || topic.has_value()};
+
+        // Try to find user
+        if (user.has_value())
+        {
+            const auto dst{m_config.users.users.find(user.value())};
+
+            if (dst != m_config.users.users.cend())
+            {
+                // Send message via preferred method
+                result &= send_to_user(dst->second, message);
+            }
+        }
+
+        // Try to find topic
+        if (topic.has_value())
+        {
+            const auto dst{m_config.users.topics.find(topic.value())};
+
+            if (dst != m_config.users.topics.cend())
+            {
+                // Send message to all users in the topic, but ignore the original recipient (if any)
+                std::string original_recipient{user.value_or("")};
+
+                for (const auto& u : dst->second)
+                {
+                    if (u == original_recipient)
+                    {
+                        continue;
+                    }
+
+                    result &= send_to_user(m_config.users.users.at(u), message);
+                }
+            }
+        }
+
+        return result;
     }
 
     void Dispatcher::on_message_received(const std::string& session_id, const protocol::Message& message)
@@ -83,15 +127,82 @@ namespace flujo::server
             // Pong
             return jsonrpcpp::Response{request, Json{}};
         }
-        else
+        else if (request.method() == "send")
         {
-            // Method not found
-            return jsonrpcpp::Response{
-                request,
-                jsonrpcpp::Error{
-                    protocol::error::to_string(protocol::error::MethodNotFound).data(),
-                    protocol::error::MethodNotFound}};
+            // Send a message
+            std::optional<std::string> user{std::nullopt};
+            std::optional<std::string> topic{std::nullopt};
+            std::string message{};
+
+            Json parser{};
+
+            if (request.params().is_array())
+            {
+                // User
+                parser = request.params().get(0);
+                if (!parser.is_null() && parser.is_string())
+                {
+                    user.emplace(parser.get<std::string>());
+                }
+
+                // Topic
+                parser = request.params().get(1);
+                if (!parser.is_null() && parser.is_string())
+                {
+                    topic.emplace(parser.get<std::string>());
+                }
+
+                // Message
+                message = request.params().get<std::string>(2);
+            }
+            else
+            {
+                // User
+                parser = request.params().get("user");
+                if (!parser.is_null() && parser.is_string())
+                {
+                    user.emplace(parser.get<std::string>());
+                }
+
+                // Topic
+                parser = request.params().get("topic");
+                if (!parser.is_null() && parser.is_string())
+                {
+                    topic.emplace(parser.get<std::string>());
+                }
+
+                // Message
+                message = request.params().get<std::string>("message");
+            }
+
+            if ((!user.has_value() && !topic.has_value()) || message.empty())
+            {
+                return jsonrpcpp::Response{
+                    request,
+                    jsonrpcpp::Error{
+                        protocol::error::to_string(protocol::error::InvalidParams).data(),
+                        protocol::error::InvalidParams}};
+            }
+
+            if (do_send_cmd(user, topic, message))
+            {
+                return jsonrpcpp::Response{request, true};
+            }
+            else
+            {
+                return jsonrpcpp::Response{
+                    request,
+                    jsonrpcpp::Error{
+                        protocol::error::to_string(protocol::error::InternalError).data(),
+                        protocol::error::InternalError}};
+            }
         }
+
+        // Method not found
+        return jsonrpcpp::Response{
+            request,
+            jsonrpcpp::Error{
+                protocol::error::to_string(protocol::error::MethodNotFound).data(), protocol::error::MethodNotFound}};
     }
 
     void Dispatcher::on_notification_received(
@@ -119,5 +230,22 @@ namespace flujo::server
         }
 
         return responses;
+    }
+
+    bool Dispatcher::send_to_user(const config::domains::Users::UserDetails& user, const std::string& message)
+    {
+        // Select preferred method
+        switch (user.preferred)
+        {
+        case config::domains::Users::CommunicationMethod::Telegram:
+            // Send via telegram
+            spdlog::debug("Sending message to {} via telegram", user.id);
+            break;
+        default:
+            spdlog::error("Cannot find preferred communication method for user {}", user.id);
+            break;
+        }
+
+        return false;
     }
 }  // namespace flujo::server

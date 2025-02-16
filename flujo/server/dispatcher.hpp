@@ -45,6 +45,24 @@ namespace flujo::server
 
         ~Dispatcher() override = default;
 
+        /// @brief Handle the delivery of a message.
+        ///
+        /// @details
+        /// This will use the appropriate communication method to attempt to deliver the message.
+        ///
+        /// @note Even if false is returned, some messages may have been delivered.
+        ///
+        /// @param[in] user         User to send the message to.
+        /// @param[in] topic        Topic to send the message to.
+        /// @param[in] message      Message to send.
+        ///
+        /// @return
+        /// Whether the message could be delivered.
+        bool do_send_cmd(
+            const std::optional<std::string>& user,
+            const std::optional<std::string>& topic,
+            const std::string& message);
+
         /// @brief Handle reception of a JSON-RPC message.
         ///
         /// @details
@@ -56,6 +74,12 @@ namespace flujo::server
         void on_message_received(const std::string& session_id, const protocol::Message& message);
 
     private:
+        /// @brief Process a `send` command.
+        ///
+        /// @details
+        /// This command expects
+        jsonrpcpp::Response on_send_cmd_received(const jsonrpcpp::Request& request);
+
         /// @brief Process a JSON-RPC request.
         ///
         /// @param[in] request          Request to process.
@@ -79,6 +103,14 @@ namespace flujo::server
         ///
         /// @return Batch of responses (if it applies).
         jsonrpcpp::Batch on_batch_received(const jsonrpcpp::Batch& batch, const protocol::Message& message);
+
+        /// @brief Send a message to a user.
+        ///
+        /// @param[in] user             Details of the user to send the message to.
+        /// @param[in] message          Message to send.
+        ///
+        /// @return Whether the message could be delivered.
+        bool send_to_user(const config::domains::Users::UserDetails& user, const std::string& message);
 
         /// @brief Application configuration.
         const config::AppConfig& m_config;

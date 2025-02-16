@@ -44,6 +44,29 @@ namespace flujo::config
                     {
                         dst = el.get();
                     }
+                    else if constexpr (
+                        toml::is_array<decltype(el)> && std::is_same_v<std::vector<std::string>, TMemberType>)
+                    {
+                        el.for_each(
+                            [&dst](toml::value<std::string> elem)
+                            {
+                                dst.emplace_back(elem);
+                            });
+                    }
+                    else if constexpr (
+                        toml::is_string<decltype(el)> &&
+                        std::is_same_v<domains::Users::CommunicationMethod, TMemberType>)
+                    {
+                        if (el.get() == "telegram")
+                        {
+                            dst = domains::Users::CommunicationMethod::Telegram;
+                        }
+                        else
+                        {
+                            // Default to telegram
+                            dst = domains::Users::CommunicationMethod::Telegram;
+                        }
+                    }
                     else
                     {
                         result = false;
@@ -300,5 +323,61 @@ namespace flujo::config
 
         result &= extract_value(section["token"], m_config.telegram.token);
         return result;
+    }
+
+    bool Loader::parse_users(const ::toml::table& table)
+    {
+        auto section{table["users"]};
+
+        if (!section)
+        {
+            // Maybe no users have been specified
+            return true;
+        }
+
+        if (!section.is_array_of_tables())
+        {
+            return false;
+        }
+
+        section.as_array()->for_each(
+            [&users = m_config.users](auto&& val)
+            {
+                if constexpr (toml::is_table<decltype(val)>)
+                {
+                    config::domains::Users::UserDetails to_add{};
+
+                    // Id
+                    extract_value(val["id"], to_add.id);
+
+                    // Topics
+                    if (val.contains("topics"))
+                    {
+                        extract_value(val["topics"], to_add.topics);
+                    }
+
+                    // Preferred communication method
+                    extract_value(val["preferred"], to_add.preferred);
+
+                    // Methods
+                    extract_value(val["telegram"], to_add.telegram);
+                    extract_value(val["email"], to_add.email);
+
+                    // Add to config
+                    for (const auto& topic : to_add.topics)
+                    {
+                        if (!users.topics.contains(topic))
+                        {
+                            users.topics.emplace(std::make_pair(topic, std::vector<std::string>{}));
+                        }
+
+                        users.topics[topic].emplace_back(to_add.id);
+                    }
+
+                    users.users.emplace(std::make_pair(to_add.id, to_add));
+                }
+            });
+
+        return true;
     }
 }  // namespace flujo::config

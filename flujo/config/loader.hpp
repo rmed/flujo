@@ -99,6 +99,13 @@ namespace flujo::config
         /// @returns Whether the section was correctly parsed.
         bool parse_telegram(const toml::table& table);
 
+        /// @brief Parse the users sections of the configuration.
+        ///
+        /// @param[in] table            Parsed TOML table.
+        ///
+        /// @returns Whether the sections were correctly parsed.
+        bool parse_users(const ::toml::table& table);
+
         AppConfig m_config;
     };
 }  // namespace flujo::config

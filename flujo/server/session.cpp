@@ -4,7 +4,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <kouta/io/packer.hpp>
 #include <kouta/io/parser.hpp>
 
 namespace flujo::server
@@ -326,7 +325,7 @@ namespace flujo::server
         }
     }
 
-    void Session::on_session_timer_expired(kouta::io::Timer& timer)
+    void Session::on_session_timer_expired(kouta::base::Timer& timer)
     {
         spdlog::info("{}: Session timed out", m_id);
 

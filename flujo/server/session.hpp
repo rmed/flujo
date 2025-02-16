@@ -5,8 +5,8 @@
 
 #include <kouta/base/callback.hpp>
 #include <kouta/base/component.hpp>
+#include <kouta/base/timer.hpp>
 #include <kouta/io/packer.hpp>
-#include <kouta/io/timer.hpp>
 
 #include "protocol/message.hpp"
 
@@ -155,7 +155,7 @@ namespace flujo::server
         /// If the session is stale it will be closed and the server notified for cleanup.
         ///
         /// @param[in,out] timer            Timer that expired.
-        void on_session_timer_expired(kouta::io::Timer& timer);
+        void on_session_timer_expired(kouta::base::Timer& timer);
 
         /// @brief Identifier for this session, used in callbacks.
         std::string m_id;
@@ -170,7 +170,7 @@ namespace flujo::server
         Connections m_connections;
 
         /// @brief Timer used to detect a stale session..
-        kouta::io::Timer m_session_timer;
+        kouta::base::Timer m_session_timer;
 
         /// @brief Size of the next message to receive.
         std::size_t m_next_message_size;
