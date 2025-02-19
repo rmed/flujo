@@ -30,6 +30,7 @@ namespace flujo::server::comms
         m_long_poll = std::make_unique<TgBot::TgLongPoll>(*m_bot.get(), 100, 10);
 
         // Configure /me command
+        // TODO: Ignore older messages
         m_bot->getEvents().onCommand(
             "start",
             [&bot = m_bot](TgBot::Message::Ptr message)
