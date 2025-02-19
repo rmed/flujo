@@ -10,3 +10,6 @@
 [submodule "submodules/jsonrpcpp"]
 	path = submodules/jsonrpcpp
 	url = https://github.com/badaix/jsonrpcpp.git
+[submodule "submodules/tgbot-cpp"]
+	path = submodules/tgbot-cpp
+	url = https://github.com/reo7sp/tgbot-cpp
