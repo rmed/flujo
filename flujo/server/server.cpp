@@ -34,6 +34,9 @@ namespace flujo::server
             return false;
         }
 
+        // Initialize services
+        m_dispatcher.start_services();
+
         return true;
     }
 
@@ -50,6 +53,8 @@ namespace flujo::server
         {
             return false;
         }
+
+        m_dispatcher.start_services();
 
         return true;
     }

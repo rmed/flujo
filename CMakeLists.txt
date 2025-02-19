@@ -2,6 +2,14 @@ cmake_minimum_required(VERSION 3.27)
 
 project(flujo)
 
+# Dependencies
+add_subdirectory("submodules/jsonrpcpp")
+add_subdirectory("submodules/kouta")
+add_subdirectory("submodules/spdlog")
+add_subdirectory("submodules/tomlplusplus")
+add_subdirectory("submodules/tgbot-cpp")
+
+# Flujo config
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -17,6 +25,7 @@ configure_file("flujo/compile-detail.h.in" "compile-detail.h")
 # Define target
 add_executable(flujo
     flujo/config/loader.cpp
+    flujo/server/comms/telegram.cpp
     flujo/server/dispatcher.cpp
     flujo/server/server.cpp
     flujo/server/session.cpp
@@ -29,11 +38,6 @@ target_compile_definitions(flujo
         TOML_EXCEPTIONS=0
 )
 
-add_subdirectory("submodules/jsonrpcpp")
-add_subdirectory("submodules/kouta")
-add_subdirectory("submodules/spdlog")
-add_subdirectory("submodules/tomlplusplus")
-
 target_include_directories(flujo PRIVATE "submodules/jsonrpcpp/include")
 
 target_link_libraries(flujo
@@ -42,5 +46,5 @@ target_link_libraries(flujo
         kouta-io-header
         spdlog
         tomlplusplus::tomlplusplus
-
+        TgBot
 )

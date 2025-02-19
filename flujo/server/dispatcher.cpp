@@ -12,7 +12,13 @@ namespace flujo::server
         , m_config{config}
         , m_connections{connections}
         , m_parser{}
+        , m_telegram{this, config}
     {
+    }
+
+    void Dispatcher::start_services()
+    {
+        m_telegram.start();
     }
 
     bool Dispatcher::do_send_cmd(
@@ -234,13 +240,16 @@ namespace flujo::server
 
     bool Dispatcher::send_to_user(const config::domains::Users::UserDetails& user, const std::string& message)
     {
+        spdlog::debug("Sending message to {}", user.id);
+
         // Select preferred method
         switch (user.preferred)
         {
         case config::domains::Users::CommunicationMethod::Telegram:
             // Send via telegram
-            spdlog::debug("Sending message to {} via telegram", user.id);
-            break;
+            spdlog::debug("Attempting to send message to {} via telegram", user.id);
+            return m_telegram.send_message(user.telegram, message);
+
         default:
             spdlog::error("Cannot find preferred communication method for user {}", user.id);
             break;

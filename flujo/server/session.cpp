@@ -159,14 +159,15 @@ namespace flujo::server
 
         if (ec)
         {
-            spdlog::error("{}: Error reading message: {}", m_id, ec.what());
-
             // Special handling
             if (ec == boost::asio::error::eof)
             {
-                // Closed by the remote client.
+                // Closed by the remote client
+                spdlog::info("{}: Closed the connection", m_id);
                 return m_connections.connection_closed();
             }
+
+            spdlog::error("{}: Error reading size: {}", m_id, ec.what());
         }
 
         if (length != MSG_SIZE_LENGTH)
@@ -208,14 +209,15 @@ namespace flujo::server
 
         if (ec)
         {
-            spdlog::error("{}: Error reading message: {}", m_id, ec.what());
-
             // Special handling
             if (ec == boost::asio::error::eof)
             {
-                // Closed by the remote client.
+                // Closed by the remote client
+                spdlog::info("{}: Closed the connection", m_id);
                 return m_connections.connection_closed();
             }
+
+            spdlog::error("{}: Error reading message: {}", m_id, ec.what());
         }
 
         if (length != m_next_message_size)

@@ -135,6 +135,7 @@ namespace flujo::config
         result &= parse_security_admin(toml_result.table());
         result &= parse_security_api(toml_result.table());
         result &= parse_telegram(toml_result.table());
+        result &= parse_users(toml_result.table());
 
         return result;
     }
@@ -322,6 +323,7 @@ namespace flujo::config
         bool result{true};
 
         result &= extract_value(section["token"], m_config.telegram.token);
+
         return result;
     }
 

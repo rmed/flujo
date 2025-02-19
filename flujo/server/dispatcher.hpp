@@ -5,6 +5,7 @@
 #include <kouta/base/callback.hpp>
 #include <kouta/base/component.hpp>
 
+#include "comms/telegram.hpp"
 #include "config/app-config.hpp"
 #include "protocol/message.hpp"
 
@@ -44,6 +45,12 @@ namespace flujo::server
         Dispatcher& operator=(Dispatcher&&) = delete;
 
         ~Dispatcher() override = default;
+
+        /// @brief Start communications services.
+        ///
+        /// @details
+        /// This method should be called after the configuration has been correctly parsed.
+        void start_services();
 
         /// @brief Handle the delivery of a message.
         ///
@@ -120,5 +127,8 @@ namespace flujo::server
 
         /// @brief JSON-RPC parser
         jsonrpcpp::Parser m_parser;
+
+        /// @brief Telegram gateway.
+        comms::Telegram m_telegram;
     };
 }  // namespace flujo::server
